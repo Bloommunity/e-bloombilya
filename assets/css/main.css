@@ -1,0 +1,66 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	color-scheme: dark;
+}
+
+html,
+body,
+#__nuxt {
+	min-height: 100%;
+}
+
+#__nuxt {
+	min-height: 100dvh;
+}
+
+body {
+	margin: 0;
+	overflow: hidden;
+	font-family: "Manrope", sans-serif;
+	background:
+		radial-gradient(circle at top left, rgba(236, 72, 153, 0.15), transparent 28%),
+		radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.12), transparent 24%),
+		linear-gradient(180deg, #050816 0%, #030712 100%);
+	color: #e2e8f0;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+	font-family: "Space Grotesk", sans-serif;
+}
+
+.scene-glow {
+	position: absolute;
+	inset: auto;
+	border-radius: 9999px;
+	filter: blur(80px);
+	pointer-events: none;
+}
+
+.scene-glow-a {
+	top: -8rem;
+	left: -6rem;
+	width: 24rem;
+	height: 24rem;
+	background: rgba(236, 72, 153, 0.12);
+}
+
+.scene-glow-b {
+	right: -8rem;
+	bottom: -6rem;
+	width: 28rem;
+	height: 28rem;
+	background: rgba(56, 189, 248, 0.1);
+}
+
+.face-mask {
+	mask-image: radial-gradient(circle, black 72%, transparent 74%);
+	-webkit-mask-image: radial-gradient(circle, black 72%, transparent 74%);
+}
