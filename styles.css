@@ -22,7 +22,12 @@ body {
 	margin: 0;
 	/* avoid page scrollbars so the app truly feels fullscreen on mobile */
 	overflow: hidden;
-	font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+	font-family:
+		system-ui,
+		-apple-system,
+		"Segoe UI",
+		Roboto,
+		"Helvetica Neue",
 		Arial;
 	background: linear-gradient(180deg, var(--bg), #04101a);
 	color: #e6eef6;
@@ -72,11 +77,7 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: linear-gradient(
-		180deg,
-		rgba(255, 255, 255, 0.02),
-		rgba(255, 255, 255, 0.01)
-	);
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
 	border: 1px solid rgba(255, 255, 255, 0.03);
 	z-index: 3;
 }
@@ -102,7 +103,9 @@ body {
 	/* make the artwork slightly translucent so colored glow shines through */
 	opacity: 0.86;
 	mix-blend-mode: hard-light;
-	transition: opacity 0.18s ease, filter 0.18s ease;
+	transition:
+		opacity 0.18s ease,
+		filter 0.18s ease;
 	filter: saturate(1.06) contrast(1.03);
 }
 
@@ -118,7 +121,10 @@ body {
 	border-radius: 50%;
 	pointer-events: none;
 	opacity: 0;
-	transition: opacity 0.26s ease, box-shadow 0.26s ease, background 0.26s ease;
+	transition:
+		opacity 0.26s ease,
+		box-shadow 0.26s ease,
+		background 0.26s ease;
 	filter: blur(84px);
 	z-index: 2;
 	mix-blend-mode: hard-light;
@@ -138,7 +144,9 @@ body {
 		width: 280vmin;
 		height: 280vmin;
 		filter: blur(170px);
-		transition: filter 0.2s ease, opacity 0.18s ease;
+		transition:
+			filter 0.2s ease,
+			opacity 0.18s ease;
 		z-index: 1; /* behind the head */
 	}
 	.glow.on {
@@ -225,7 +233,9 @@ body {
 	border-radius: 999px;
 	font-size: 0.92rem;
 	cursor: pointer;
-	transition: transform 0.12s ease, background 0.12s ease;
+	transition:
+		transform 0.12s ease,
+		background 0.12s ease;
 }
 .mode:hover {
 	transform: translateY(-3px);
@@ -265,7 +275,9 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	transition: transform 0.12s ease, box-shadow 0.12s ease;
+	transition:
+		transform 0.12s ease,
+		box-shadow 0.12s ease;
 }
 .color-btn img {
 	width: 100%;
@@ -279,35 +291,39 @@ body {
 	transform: translateY(-3px) scale(1.03);
 }
 .color-btn.selected {
-	box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55),
+	box-shadow:
+		0 10px 26px rgba(0, 0, 0, 0.55),
 		0 0 0 3px rgba(255, 255, 255, 0.06);
 }
 
 .infinity {
 	position: absolute;
 	z-index: 6;
-	left: 49%;
-	top: 53%;
+	left: 49.2%;
+	top: 52.5%;
 	transform: translate(-50%, -50%);
-	width: 30px;
-	height: 30px;
-	border-radius: 50%;
-	border: 0;
-	background: radial-gradient(circle at 30% 28%, #fff6c6, #ffd24d);
-	color: #ffcf33;
+	width: 1.7rem;
+	height: 1.7rem;
+	border-radius: 9999px;
+	border: 1px solid rgba(255, 215, 116, 0.28);
+	background: linear-gradient(180deg, rgba(255, 236, 145, 0.98), rgba(255, 186, 63, 0.98));
+	color: #ff9f00;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	font-size: 100%;
-	box-shadow: 0 10px 30px rgba(255, 180, 50, 0.18),
-		0 0 28px rgba(255, 200, 60, 0.12);
+	box-shadow:
+		0 8px 18px rgba(255, 187, 64, 0.3),
+		0 0 0 1px rgba(255, 255, 255, 0.08),
+		inset 0 1px 0 rgba(255, 255, 255, 0.24);
 	cursor: pointer;
 	pointer-events: auto;
 }
 .infinity::before {
 	content: "★";
-	color: #ffcf33;
-	filter: drop-shadow(0 6px 18px rgba(255, 180, 40, 0.45));
+	color: #ff9f00;
+	font-size: 0.8rem;
+	filter: drop-shadow(0 2px 8px rgba(255, 180, 40, 0.4));
 }
 .infinity:focus {
 	outline: 2px solid rgba(255, 255, 255, 0.16);
@@ -401,11 +417,7 @@ body {
 	max-width: 920px;
 	padding: 12px 14px;
 	border-radius: 14px;
-	background: linear-gradient(
-		180deg,
-		rgba(0, 0, 0, 0.6),
-		rgba(0, 0, 0, 0.28)
-	);
+	background: linear-gradient(180deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.28));
 }
 
 /* Responsive caps */

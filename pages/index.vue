@@ -190,7 +190,11 @@ function stopMode() {
 
 function setColor(colorHex: string) {
 	currentColor.value = colorHex;
-	syncFaceImage(colorHex);
+	if (isOn.value) {
+		syncFaceImage(colorHex);
+	} else {
+		currentFaceSrc.value = OFFICIAL_FACE;
+	}
 
 	for (const swatch of swatches.value) {
 		swatch.ready = swatch.color === colorHex;
@@ -206,6 +210,7 @@ function turnOn() {
 
 	isOn.value = true;
 	glowVisible.value = true;
+	syncFaceImage(currentColor.value);
 	applyGlow(currentColor.value);
 	setGlowState(true);
 	startMode();
@@ -216,6 +221,7 @@ function turnOff() {
 
 	isOn.value = false;
 	glowVisible.value = false;
+	currentFaceSrc.value = OFFICIAL_FACE;
 	stopMode();
 	setGlowState(false);
 }
@@ -226,12 +232,15 @@ function startMode() {
 	if (!isOn.value) return;
 
 	if (currentMode.value === "fixed") {
+		glowVisible.value = true;
 		applyGlow(currentColor.value);
 		setGlowState(true);
 		return;
 	}
 
 	if (currentMode.value === "random") {
+		glowVisible.value = true;
+		setGlowState(true);
 		modeInterval = globalThis.setInterval(() => {
 			const readyColors = swatches.value.filter(
 				(swatch) => swatch.ready || swatch.color !== "#ffffff",
@@ -247,10 +256,16 @@ function startMode() {
 	if (currentMode.value === "blink") {
 		glowVisible.value = true;
 		setGlowState(true);
+		syncFaceImage(currentColor.value);
 
 		modeInterval = globalThis.setInterval(() => {
 			glowVisible.value = !glowVisible.value;
-			if (glowVisible.value) applyGlow(currentColor.value);
+			if (glowVisible.value) {
+				syncFaceImage(currentColor.value);
+				applyGlow(currentColor.value);
+			} else {
+				currentFaceSrc.value = OFFICIAL_FACE;
+			}
 			setGlowState(glowVisible.value);
 		}, 450);
 	}
@@ -418,7 +433,6 @@ watch(isOn, (value) => {
 });
 
 setColor(currentColor.value);
-syncFaceImage(currentColor.value);
 </script>
 
 <template>
@@ -497,108 +511,118 @@ syncFaceImage(currentColor.value);
 								:key="currentFaceSrc"
 								alt="BINI bloombilya lightstick"
 							/>
-
-							<button
-								class="absolute left-1/2 top-[53%] z-10 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-100/50 bg-[radial-gradient(circle_at_30%_28%,#fff6c6,#ffd24d)] text-amber-300 shadow-[0_10px_30px_rgba(255,180,50,0.18),0_0_28px_rgba(255,200,60,0.12)] transition-transform duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/20 sm:h-12 sm:w-12"
-								type="button"
-								aria-label="Toggle power"
-								title="Toggle power"
-								@click="isOn ? turnOff() : turnOn()"
-							>
-								<span class="text-lg leading-none text-amber-300">★</span>
-							</button>
 						</div>
+
+						<button
+							class="absolute left-[49.2%] top-[52.5%] z-30 flex h-[clamp(1.55rem,2.4vmin,1.9rem)] w-[clamp(1.55rem,2.4vmin,1.9rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-200/25 bg-[linear-gradient(180deg,rgba(255,236,145,0.98),rgba(255,186,63,0.98))] p-0 shadow-[0_8px_18px_rgba(255,187,64,0.3),0_0_0_1px_rgba(255,255,255,0.08),inset_0_1px_0_rgba(255,255,255,0.24)] transition-transform duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white/20"
+							type="button"
+							aria-label="Toggle power"
+							title="Toggle power"
+							@click="isOn ? turnOff() : turnOn()"
+						>
+							<span
+								class="inline-flex items-center justify-center rounded-full text-[clamp(0.8rem,1.25vmin,0.95rem)] leading-none text-[#ff9f00] drop-shadow-[0_2px_8px_rgba(255,180,40,0.4)]"
+							>
+								★
+							</span>
+						</button>
 					</div>
 				</div>
 			</section>
 
 			<aside
 				data-animate
-				class="z-20 mx-auto max-h-[32svh] w-[calc(100vw-1.5rem)] max-w-[560px] overflow-y-auto rounded-[1.5rem] border border-white/15 bg-slate-950/45 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition duration-200 sm:w-[calc(100vw-2.5rem)] sm:p-4 xl:fixed xl:right-4 xl:top-[7.25rem] xl:mx-0 xl:max-h-[calc(100vh-8.5rem)] xl:w-[min(300px,calc(100vw-2rem))] xl:max-w-none xl:bg-slate-950/60"
+				class="fixed left-1/2 bottom-16 z-20 flex w-[min(92vw,560px)] -translate-x-1/2 max-h-[44svh] overflow-y-auto rounded-[1.5rem] border border-white/15 bg-slate-950/55 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition duration-200 sm:bottom-6 sm:w-[min(86vw,560px)] sm:p-4 xl:static xl:mx-0 xl:max-h-[calc(100vh-8.5rem)] xl:w-full xl:max-w-[320px] xl:translate-x-0 xl:self-start xl:bg-slate-950/60"
 				:class="
 					controlsOpen
 						? 'opacity-100 translate-y-0 pointer-events-auto'
 						: 'opacity-0 translate-y-6 pointer-events-none xl:opacity-100 xl:translate-y-0 xl:pointer-events-auto'
 				"
 			>
-				<div class="mb-3 flex items-center justify-center gap-2 sm:justify-start">
-					<button
-						class="rounded-full border px-3 py-2 text-xs font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-4 sm:text-sm"
-						:class="
-							isOn
-								? 'border-emerald-300/40 bg-emerald-400 text-slate-950 shadow-[0_12px_32px_rgba(16,185,129,0.28)] hover:bg-emerald-300'
-								: 'border-white/10 bg-white/10 text-white hover:bg-white/20'
-						"
-						type="button"
-						@click="turnOn()"
-						:aria-pressed="isOn"
-					>
-						On
-					</button>
-					<button
-						class="rounded-full border px-3 py-2 text-xs font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-4 sm:text-sm"
-						:class="
-							!isOn
-								? 'border-rose-300/40 bg-rose-400 text-slate-950 shadow-[0_12px_32px_rgba(244,63,94,0.28)] hover:bg-rose-300'
-								: 'border-white/10 bg-white/10 text-white hover:bg-white/20'
-						"
-						type="button"
-						@click="turnOff()"
-						:aria-pressed="!isOn"
-					>
-						Off
-					</button>
-				</div>
+				<div class="w-full space-y-4">
+					<div class="grid w-full grid-cols-2 gap-2">
+						<button
+							class="rounded-full border px-3 py-2 text-xs font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-4 sm:text-sm"
+							:class="
+								isOn
+									? 'border-emerald-300/40 bg-emerald-400 text-slate-950 shadow-[0_12px_32px_rgba(16,185,129,0.28)] hover:bg-emerald-300'
+									: 'border-white/10 bg-white/10 text-white hover:bg-white/20'
+							"
+							type="button"
+							@click="turnOn()"
+							:aria-pressed="isOn"
+						>
+							On
+						</button>
+						<button
+							class="rounded-full border px-3 py-2 text-xs font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-4 sm:text-sm"
+							:class="
+								!isOn
+									? 'border-rose-300/40 bg-rose-400 text-slate-950 shadow-[0_12px_32px_rgba(244,63,94,0.28)] hover:bg-rose-300'
+									: 'border-white/10 bg-white/10 text-white hover:bg-white/20'
+							"
+							type="button"
+							@click="turnOff()"
+							:aria-pressed="!isOn"
+						>
+							Off
+						</button>
+					</div>
 
-				<div
-					class="mb-3 flex flex-wrap items-center justify-center gap-2 text-xs sm:justify-start sm:text-sm"
-				>
-					<span class="text-slate-400">Mode:</span>
-					<button
-						v-for="mode in ['fixed', 'random', 'blink']"
-						:key="mode"
-						type="button"
-						class="rounded-full border px-3 py-2 font-medium transition duration-200 hover:-translate-y-0.5 sm:px-4"
-						:class="
-							currentMode === mode
-								? 'border-fuchsia-400/30 bg-fuchsia-500 text-white'
-								: 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
-						"
-						@click="currentMode = mode as Mode"
-					>
-						{{ mode.charAt(0).toUpperCase() + mode.slice(1) }}
-					</button>
-				</div>
+					<div class="flex w-full flex-col gap-2">
+						<span
+							class="text-center text-xs font-medium uppercase tracking-[0.28em] text-slate-400 sm:text-left"
+						>
+							Mode
+						</span>
+						<div class="grid grid-cols-3 gap-2">
+							<button
+								v-for="mode in ['fixed', 'random', 'blink']"
+								:key="mode"
+								type="button"
+								class="rounded-full border px-3 py-2 text-xs font-medium transition duration-200 hover:-translate-y-0.5 sm:px-4 sm:text-sm"
+								:class="
+									currentMode === mode
+										? 'border-fuchsia-400/30 bg-fuchsia-500 text-white'
+										: 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
+								"
+								@click="currentMode = mode as Mode"
+							>
+								{{ mode.charAt(0).toUpperCase() + mode.slice(1) }}
+							</button>
+						</div>
+					</div>
 
-				<div
-					class="grid max-h-[34vh] grid-cols-[repeat(auto-fit,minmax(3.25rem,1fr))] gap-2 overflow-y-auto sm:max-h-[32vh] xl:max-h-[calc(100dvh-22rem)]"
-				>
-					<button
-						v-for="swatch in swatches"
-						:key="swatch.src"
-						type="button"
-						class="group aspect-square min-h-[3rem] overflow-hidden rounded-xl border transition duration-200 hover:-translate-y-0.5"
-						:class="
-							currentColor === swatch.color
-								? 'border-white/60 shadow-[0_12px_28px_rgba(0,0,0,0.45),0_0_0_3px_rgba(255,255,255,0.08)]'
-								: 'border-white/5 shadow-[0_8px_20px_rgba(0,0,0,0.24)]'
-						"
-						:style="{ background: swatch.color }"
-						:aria-label="`Color from ${swatch.label}`"
-						@click="setColor(swatch.color)"
+					<div
+						class="grid max-h-[34vh] grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4 sm:max-h-[32vh] xl:max-h-[calc(100dvh-22rem)]"
 					>
-						<img
-							:src="swatch.src"
-							alt=""
-							class="h-full w-full object-cover opacity-85"
-						/>
-					</button>
-				</div>
+						<button
+							v-for="swatch in swatches"
+							:key="swatch.src"
+							type="button"
+							class="group aspect-square min-h-[3rem] overflow-hidden rounded-xl border transition duration-200 hover:-translate-y-0.5"
+							:class="
+								currentColor === swatch.color
+									? 'border-white/60 shadow-[0_12px_28px_rgba(0,0,0,0.45),0_0_0_3px_rgba(255,255,255,0.08)]'
+									: 'border-white/5 shadow-[0_8px_20px_rgba(0,0,0,0.24)]'
+							"
+							:style="{ background: swatch.color }"
+							:aria-label="`Color from ${swatch.label}`"
+							@click="setColor(swatch.color)"
+						>
+							<img
+								:src="swatch.src"
+								alt=""
+								class="h-full w-full object-cover opacity-85"
+							/>
+						</button>
+					</div>
 
-				<p class="mt-4 text-center text-xs leading-5 text-slate-300 sm:text-sm">
-					Tip: use On, pick a color, and try Random or Blink for live concert light
-					effects.
-				</p>
+					<p class="text-center text-xs leading-5 text-slate-300 sm:text-sm">
+						Tip: use On, pick a color, and try Random or Blink for live concert light
+						effects.
+					</p>
+				</div>
 			</aside>
 		</div>
 	</main>
