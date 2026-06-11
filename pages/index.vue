@@ -10,6 +10,10 @@ type Swatch = {
 	ready: boolean;
 };
 
+type FaceVariant = {
+	src: string;
+};
+
 const COLOR_IMAGES = [
 	{ src: "/images/colors/AIAH.png", label: "AIAH" },
 	{ src: "/images/colors/BINI OT8.png", label: "BINI OT8" },
@@ -23,6 +27,17 @@ const COLOR_IMAGES = [
 ];
 
 const OFFICIAL_FACE = "/images/bloombilya.png";
+const FACE_VARIANTS: FaceVariant[] = [
+	{ src: new URL("../assets/images/bloombilya-red.png", import.meta.url).href },
+	{ src: new URL("../assets/images/bloombilya-orange.png", import.meta.url).href },
+	{ src: new URL("../assets/images/bloombilya-yellow.png", import.meta.url).href },
+	{ src: new URL("../assets/images/bloombilya-green.png", import.meta.url).href },
+	{ src: new URL("../assets/images/bloombilya-teal.png", import.meta.url).href },
+	{ src: new URL("../assets/images/bloombilya-lightblue.png", import.meta.url).href },
+	{ src: new URL("../assets/images/bloombilya-blue.png", import.meta.url).href },
+	{ src: new URL("../assets/images/bloombilya-violet.png", import.meta.url).href },
+	{ src: new URL("../assets/images/bloombilya-pink.png", import.meta.url).href },
+];
 
 const lightstickRef = ref<HTMLElement | null>(null);
 const glowRef = ref<HTMLElement | null>(null);
@@ -40,6 +55,7 @@ const currentMode = ref<Mode>("fixed");
 const isOn = ref(false);
 const glowVisible = ref(false);
 const controlsOpen = ref(true);
+const currentFaceSrc = ref(OFFICIAL_FACE);
 
 let modeInterval: ReturnType<typeof globalThis.setInterval> | null = null;
 let removeTouchEndListener: (() => void) | null = null;
@@ -60,14 +76,86 @@ function hexToRgba(hex: string, alpha = 1) {
 }
 
 function glowStyle(colorHex: string) {
-	const softCenter = "rgba(255,255,255,0.22)";
-	const midTone = hexToRgba(colorHex, 0.9);
-	const edgeTone = hexToRgba(colorHex, 0.32);
+	const centerTone = hexToRgba(colorHex, 0.18);
+	const midTone = hexToRgba(colorHex, 0.82);
+	const edgeTone = hexToRgba(colorHex, 0.28);
 
 	return {
-		background: `radial-gradient(circle at 50% 30%, ${softCenter} 0%, ${midTone} 22%, ${edgeTone} 52%, transparent 70%)`,
-		boxShadow: `0 0 44px ${hexToRgba(colorHex, 0.45)}, 0 0 160px ${hexToRgba(colorHex, 0.2)}`,
+		background: `radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.18) 0%, ${midTone} 22%, ${edgeTone} 55%, transparent 70%), radial-gradient(circle at 50% 70%, ${centerTone} 0%, transparent 82%)`,
+		boxShadow: `0 0 40px ${hexToRgba(colorHex, 0.4)}, 0 0 140px ${hexToRgba(colorHex, 0.18)}`,
 	};
+}
+
+function imageGlowStyle(colorHex: string) {
+	return {
+		filter: `drop-shadow(0 0 18px ${hexToRgba(colorHex, 0.6)}) drop-shadow(0 0 90px ${hexToRgba(colorHex, 0.3)}) brightness(1.12) saturate(1.3)`,
+	};
+}
+
+function hexToRgb(hex: string) {
+	const normalized = hex.replace("#", "");
+	const value = Number.parseInt(normalized, 16);
+
+	return {
+		red: (value >> 16) & 255,
+		green: (value >> 8) & 255,
+		blue: value & 255,
+	};
+}
+
+function hexToHsl(hex: string) {
+	const { red, green, blue } = hexToRgb(hex);
+	const normalizedRed = red / 255;
+	const normalizedGreen = green / 255;
+	const normalizedBlue = blue / 255;
+	const max = Math.max(normalizedRed, normalizedGreen, normalizedBlue);
+	const min = Math.min(normalizedRed, normalizedGreen, normalizedBlue);
+	const delta = max - min;
+
+	let hue = 0;
+	const lightness = (max + min) / 2;
+	const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+
+	if (delta !== 0) {
+		switch (max) {
+			case normalizedRed:
+				hue = 60 * (((normalizedGreen - normalizedBlue) / delta) % 6);
+				break;
+			case normalizedGreen:
+				hue = 60 * ((normalizedBlue - normalizedRed) / delta + 2);
+				break;
+			default:
+				hue = 60 * ((normalizedRed - normalizedGreen) / delta + 4);
+		}
+	}
+
+	return {
+		hue: (hue + 360) % 360,
+		saturation,
+		lightness,
+	};
+}
+
+function resolveFaceSrc(colorHex: string) {
+	const { hue, saturation, lightness } = hexToHsl(colorHex);
+
+	if (saturation < 0.16 || lightness > 0.92) {
+		return OFFICIAL_FACE;
+	}
+
+	if (hue < 15 || hue >= 345) return FACE_VARIANTS[0].src;
+	if (hue < 40) return FACE_VARIANTS[1].src;
+	if (hue < 60) return FACE_VARIANTS[2].src;
+	if (hue < 145) return FACE_VARIANTS[3].src;
+	if (hue < 175) return FACE_VARIANTS[4].src;
+	if (hue < 205) return FACE_VARIANTS[5].src;
+	if (hue < 245) return FACE_VARIANTS[6].src;
+	if (hue < 295) return FACE_VARIANTS[7].src;
+	return FACE_VARIANTS[8].src;
+}
+
+function syncFaceImage(colorHex: string) {
+	currentFaceSrc.value = resolveFaceSrc(colorHex);
 }
 
 function applyGlow(colorHex: string) {
@@ -102,6 +190,7 @@ function stopMode() {
 
 function setColor(colorHex: string) {
 	currentColor.value = colorHex;
+	syncFaceImage(colorHex);
 
 	for (const swatch of swatches.value) {
 		swatch.ready = swatch.color === colorHex;
@@ -329,6 +418,7 @@ watch(isOn, (value) => {
 });
 
 setColor(currentColor.value);
+syncFaceImage(currentColor.value);
 </script>
 
 <template>
@@ -337,7 +427,7 @@ setColor(currentColor.value);
 		<div class="scene-glow scene-glow-b" />
 
 		<div
-			class="relative z-10 mx-auto grid h-full w-full max-w-7xl grid-rows-[auto_minmax(0,1fr)_auto] grid-cols-1 gap-4 px-3 py-3 sm:gap-5 sm:px-5 sm:py-5 lg:px-8 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,400px)] xl:grid-rows-[auto_minmax(0,1fr)] xl:items-start xl:gap-6"
+			class="relative z-10 mx-auto grid h-full w-full max-w-7xl grid-rows-[auto_minmax(0,1fr)] grid-cols-1 gap-4 px-3 py-3 sm:gap-5 sm:px-5 sm:py-5 lg:px-8 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] xl:grid-rows-[auto_minmax(0,1fr)] xl:items-start xl:gap-6"
 		>
 			<header
 				class="flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-white/5 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5 xl:col-span-2"
@@ -362,7 +452,7 @@ setColor(currentColor.value);
 			</header>
 
 			<button
-				class="fixed bottom-4 right-4 z-30 rounded-full border border-white/10 bg-slate-950/70 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition hover:bg-slate-950/85 xl:hidden"
+				class="fixed bottom-4 left-1/2 z-30 w-[min(92vw,280px)] -translate-x-1/2 rounded-full border border-white/10 bg-slate-950/72 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition hover:bg-slate-950/85 xl:hidden"
 				type="button"
 				@click="controlsOpen = !controlsOpen"
 			>
@@ -372,29 +462,39 @@ setColor(currentColor.value);
 			<section
 				class="relative flex min-h-0 items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:p-6 xl:min-w-0"
 			>
-				<div ref="lightstickRef" class="relative flex w-full items-center justify-center">
+				<div
+					class="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[78vmin] w-[78vmin] -translate-x-1/2 -translate-y-1/2 rounded-full transition-opacity duration-300 sm:h-[64vmin] sm:w-[64vmin] xl:h-[52rem] xl:w-[52rem]"
+					:class="glowVisible ? 'opacity-100' : 'opacity-0'"
+					:style="glowStyle(currentColor)"
+					aria-hidden="true"
+				/>
+
+				<div
+					ref="lightstickRef"
+					class="relative z-10 flex w-full items-center justify-center"
+				>
 					<div
-						class="relative flex aspect-square w-[min(72vmin,540px)] items-center justify-center rounded-[2rem] border border-white/10 bg-white/5 shadow-[0_40px_160px_rgba(0,0,0,0.5)] backdrop-blur-2xl sm:w-[min(64vmin,620px)] sm:rounded-[2.5rem] lg:w-[min(54vmin,680px)] xl:w-[min(100%,720px)]"
+						class="relative flex aspect-square w-[min(72vmin,540px)] items-center justify-center sm:w-[min(64vmin,620px)] lg:w-[min(54vmin,680px)] xl:w-[min(100%,720px)]"
 					>
 						<div
 							class="face-mask relative flex h-[86%] w-[86%] items-center justify-center overflow-hidden rounded-full"
 						>
 							<div
-								ref="glowRef"
-								class="pointer-events-none absolute left-1/2 top-[1%] z-20 h-[58%] w-[58%] -translate-x-1/2 rounded-full mix-blend-screen transition-opacity duration-300 sm:top-0 sm:h-[52%] sm:w-[52%] lg:h-[48%] lg:w-[48%]"
+								class="pointer-events-none absolute inset-[-6%] rounded-full transition-opacity duration-300"
 								:class="glowVisible ? 'opacity-100' : 'opacity-0'"
-								:style="glowStyle(currentColor)"
+								:style="imageGlowStyle(currentColor)"
 								aria-hidden="true"
 							/>
 
 							<img
-								class="relative z-10 h-full w-full select-none object-cover opacity-90 mix-blend-hard-light transition duration-200"
+								class="relative z-10 h-full w-full select-none object-cover object-center opacity-90 transition duration-200"
 								:class="
 									isOn
-										? ''
+										? 'mix-blend-screen'
 										: 'grayscale-[65%] brightness-75 opacity-70 mix-blend-normal'
 								"
-								:src="OFFICIAL_FACE"
+								:src="currentFaceSrc"
+								:key="currentFaceSrc"
 								alt="BINI bloombilya lightstick"
 							/>
 
@@ -414,16 +514,16 @@ setColor(currentColor.value);
 
 			<aside
 				data-animate
-				class="z-20 mx-auto max-h-[34svh] w-[calc(100vw-1.5rem)] max-w-[560px] overflow-y-auto rounded-[1.5rem] border border-white/15 bg-slate-950/45 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition duration-200 sm:w-[calc(100vw-2.5rem)] sm:p-5 xl:mx-0 xl:max-h-[calc(100vh-2rem)] xl:w-full xl:max-w-none xl:bg-slate-950/60"
+				class="z-20 mx-auto max-h-[32svh] w-[calc(100vw-1.5rem)] max-w-[560px] overflow-y-auto rounded-[1.5rem] border border-white/15 bg-slate-950/45 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition duration-200 sm:w-[calc(100vw-2.5rem)] sm:p-4 xl:fixed xl:right-4 xl:top-[7.25rem] xl:mx-0 xl:max-h-[calc(100vh-8.5rem)] xl:w-[min(300px,calc(100vw-2rem))] xl:max-w-none xl:bg-slate-950/60"
 				:class="
 					controlsOpen
 						? 'opacity-100 translate-y-0 pointer-events-auto'
 						: 'opacity-0 translate-y-6 pointer-events-none xl:opacity-100 xl:translate-y-0 xl:pointer-events-auto'
 				"
 			>
-				<div class="mb-4 flex items-center justify-center gap-3 sm:justify-start">
+				<div class="mb-3 flex items-center justify-center gap-2 sm:justify-start">
 					<button
-						class="rounded-full border px-4 py-2 text-sm font-semibold transition duration-200 hover:-translate-y-0.5"
+						class="rounded-full border px-3 py-2 text-xs font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-4 sm:text-sm"
 						:class="
 							isOn
 								? 'border-emerald-300/40 bg-emerald-400 text-slate-950 shadow-[0_12px_32px_rgba(16,185,129,0.28)] hover:bg-emerald-300'
@@ -436,7 +536,7 @@ setColor(currentColor.value);
 						On
 					</button>
 					<button
-						class="rounded-full border px-4 py-2 text-sm font-semibold transition duration-200 hover:-translate-y-0.5"
+						class="rounded-full border px-3 py-2 text-xs font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-4 sm:text-sm"
 						:class="
 							!isOn
 								? 'border-rose-300/40 bg-rose-400 text-slate-950 shadow-[0_12px_32px_rgba(244,63,94,0.28)] hover:bg-rose-300'
@@ -451,14 +551,14 @@ setColor(currentColor.value);
 				</div>
 
 				<div
-					class="mb-4 flex flex-wrap items-center justify-center gap-2 text-sm sm:justify-start"
+					class="mb-3 flex flex-wrap items-center justify-center gap-2 text-xs sm:justify-start sm:text-sm"
 				>
 					<span class="text-slate-400">Mode:</span>
 					<button
 						v-for="mode in ['fixed', 'random', 'blink']"
 						:key="mode"
 						type="button"
-						class="rounded-full border px-4 py-2 font-medium transition duration-200 hover:-translate-y-0.5"
+						class="rounded-full border px-3 py-2 font-medium transition duration-200 hover:-translate-y-0.5 sm:px-4"
 						:class="
 							currentMode === mode
 								? 'border-fuchsia-400/30 bg-fuchsia-500 text-white'
@@ -471,13 +571,13 @@ setColor(currentColor.value);
 				</div>
 
 				<div
-					class="grid max-h-[38vh] grid-cols-[repeat(auto-fit,minmax(3.75rem,1fr))] gap-2 overflow-y-auto sm:max-h-[32vh] xl:max-h-[calc(100dvh-22rem)]"
+					class="grid max-h-[34vh] grid-cols-[repeat(auto-fit,minmax(3.25rem,1fr))] gap-2 overflow-y-auto sm:max-h-[32vh] xl:max-h-[calc(100dvh-22rem)]"
 				>
 					<button
 						v-for="swatch in swatches"
 						:key="swatch.src"
 						type="button"
-						class="group aspect-square min-h-[3.5rem] overflow-hidden rounded-xl border transition duration-200 hover:-translate-y-0.5"
+						class="group aspect-square min-h-[3rem] overflow-hidden rounded-xl border transition duration-200 hover:-translate-y-0.5"
 						:class="
 							currentColor === swatch.color
 								? 'border-white/60 shadow-[0_12px_28px_rgba(0,0,0,0.45),0_0_0_3px_rgba(255,255,255,0.08)]'

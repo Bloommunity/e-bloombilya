@@ -1,6 +1,9 @@
 export default defineNuxtConfig({
 	modules: ["@nuxtjs/tailwindcss"],
 	css: ["~/assets/css/main.css"],
+	experimental: {
+		appManifest: false,
+	},
 	app: {
 		head: {
 			title: "E-Bloombilya — Virtual Lightstick",

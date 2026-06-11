@@ -41,9 +41,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (!glow) return;
 		// gentle white center + colored glow
 		const c1 = "rgba(255,255,255,0.18)";
-		const c2 = hexToRgba(colorHex, 0.85);
+		const c2 = hexToRgba(colorHex, 0.82);
 		const c3 = hexToRgba(colorHex, 0.28);
-		glow.style.background = `radial-gradient(circle at 50% 40%, ${c1} 0%, ${c2} 22%, ${c3} 55%, transparent 70%)`;
+		glow.style.background = `radial-gradient(circle at 50% 40%, ${c1} 0%, ${c2} 22%, ${c3} 55%, transparent 70%), radial-gradient(circle at 50% 70%, ${hexToRgba(colorHex, 0.18)} 0%, transparent 82%)`;
 		glow.style.boxShadow = `0 0 40px ${hexToRgba(
 			colorHex,
 			0.4
