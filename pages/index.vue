@@ -40,6 +40,7 @@ const FACE_VARIANTS: FaceVariant[] = [
 ];
 
 const lightstickRef = ref<HTMLElement | null>(null);
+const stageRef = ref<HTMLElement | null>(null);
 const glowRef = ref<HTMLElement | null>(null);
 
 const swatches = ref<Swatch[]>(
@@ -54,12 +55,14 @@ const currentColor = ref("#ffffff");
 const currentMode = ref<Mode>("fixed");
 const isOn = ref(false);
 const glowVisible = ref(false);
+const isFullscreen = ref(false);
 const controlsOpen = ref(true);
 const currentFaceSrc = ref(OFFICIAL_FACE);
 
 let modeInterval: ReturnType<typeof globalThis.setInterval> | null = null;
 let removeTouchEndListener: (() => void) | null = null;
 let removeViewportResizeListener: (() => void) | null = null;
+let removeFullscreenListener: (() => void) | null = null;
 let cleanupListeners: (() => void) | null = null;
 
 useHead({
@@ -179,6 +182,40 @@ function setGlowState(visible: boolean) {
 		ease: "power2.out",
 		overwrite: "auto",
 	});
+}
+
+function syncFullscreenState() {
+	isFullscreen.value = document.fullscreenElement === stageRef.value;
+}
+
+async function toggleFullscreen() {
+	const stage = stageRef.value;
+	if (!stage) return;
+
+	if (isFullscreen.value && !document.fullscreenElement) {
+		isFullscreen.value = false;
+		return;
+	}
+
+	if (document.fullscreenElement) {
+		try {
+			await document.exitFullscreen();
+		} catch {
+			isFullscreen.value = false;
+		}
+		return;
+	}
+
+	if (stage.requestFullscreen) {
+		try {
+			await stage.requestFullscreen();
+			return;
+		} catch {
+			// fall back to the in-app fullscreen state below
+		}
+	}
+
+	isFullscreen.value = true;
 }
 
 function stopMode() {
@@ -374,6 +411,7 @@ onBeforeUnmount(() => {
 	stopMode();
 	removeTouchEndListener?.();
 	removeViewportResizeListener?.();
+	removeFullscreenListener?.();
 	cleanupListeners?.();
 });
 
@@ -407,6 +445,13 @@ onMounted(async () => {
 		};
 	}
 
+	const onFullscreenChange = () => syncFullscreenState();
+	document.addEventListener("fullscreenchange", onFullscreenChange);
+	removeFullscreenListener = () => {
+		document.removeEventListener("fullscreenchange", onFullscreenChange);
+	};
+	syncFullscreenState();
+
 	const onTouchEnd = () => globalThis.setTimeout(setViewportHeight, 50);
 	globalThis.addEventListener("touchend", onTouchEnd);
 	removeTouchEndListener = () => {
@@ -436,14 +481,19 @@ setColor(currentColor.value);
 </script>
 
 <template>
-	<main class="isolate fixed inset-0 overflow-hidden bg-[#050816] text-slate-100">
+	<main
+		class="isolate fixed inset-0 overflow-hidden bg-[#050816] text-slate-100"
+		:class="isFullscreen ? '!bg-black' : ''"
+	>
 		<div class="scene-glow scene-glow-a" />
 		<div class="scene-glow scene-glow-b" />
 
 		<div
 			class="relative z-10 mx-auto grid h-full w-full max-w-7xl grid-rows-[auto_minmax(0,1fr)] grid-cols-1 gap-4 px-3 py-3 sm:gap-5 sm:px-5 sm:py-5 lg:px-8 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] xl:grid-rows-[auto_minmax(0,1fr)] xl:items-start xl:gap-6"
+			:class="isFullscreen ? '!max-w-none !px-0 !py-0' : ''"
 		>
 			<header
+				v-if="!isFullscreen"
 				class="flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-white/5 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5 xl:col-span-2"
 				data-animate
 			>
@@ -466,6 +516,7 @@ setColor(currentColor.value);
 			</header>
 
 			<button
+				v-if="!isFullscreen"
 				class="fixed bottom-4 left-1/2 z-30 w-[min(92vw,280px)] -translate-x-1/2 rounded-full border border-white/10 bg-slate-950/72 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition hover:bg-slate-950/85 xl:hidden"
 				type="button"
 				@click="controlsOpen = !controlsOpen"
@@ -474,21 +525,42 @@ setColor(currentColor.value);
 			</button>
 
 			<section
+				ref="stageRef"
 				class="relative flex min-h-0 items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:p-6 xl:min-w-0"
+				:class="
+					isFullscreen
+						? '!fixed !inset-0 !z-50 !rounded-none !border-0 !bg-black !p-0 !shadow-none !backdrop-blur-0'
+						: ''
+				"
 			>
 				<div
-					class="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[78vmin] w-[78vmin] -translate-x-1/2 -translate-y-1/2 rounded-full transition-opacity duration-300 sm:h-[64vmin] sm:w-[64vmin] xl:h-[52rem] xl:w-[52rem]"
-					:class="glowVisible ? 'opacity-100' : 'opacity-0'"
+					class="pointer-events-none absolute left-1/2 top-1/2 z-0 rounded-full transition-opacity duration-300"
+					:class="[
+						glowVisible ? 'opacity-100' : 'opacity-0',
+						isFullscreen
+							? '!h-[140vmax] !w-[140vmax] -translate-x-1/2 -translate-y-1/2 !blur-[120px]'
+							: 'h-[78vmin] w-[78vmin] -translate-x-1/2 -translate-y-1/2 sm:h-[64vmin] sm:w-[64vmin] xl:h-[52rem] xl:w-[52rem]',
+					]"
 					:style="glowStyle(currentColor)"
 					aria-hidden="true"
 				/>
 
+				<button
+					class="absolute right-4 top-4 z-40 rounded-full border border-white/15 bg-slate-950/70 px-4 py-2 text-xs font-semibold text-white shadow-[0_14px_36px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition hover:bg-slate-950/85"
+					type="button"
+					@click="toggleFullscreen()"
+				>
+					{{ isFullscreen ? "Exit fullscreen" : "Fullscreen" }}
+				</button>
+
 				<div
 					ref="lightstickRef"
 					class="relative z-10 flex w-full items-center justify-center"
+					:class="isFullscreen ? 'h-full' : ''"
 				>
 					<div
 						class="relative flex aspect-square w-[min(72vmin,540px)] items-center justify-center sm:w-[min(64vmin,620px)] lg:w-[min(54vmin,680px)] xl:w-[min(100%,720px)]"
+						:class="isFullscreen ? '!w-[min(92vmin,1000px)]' : ''"
 					>
 						<div
 							class="face-mask relative flex h-[86%] w-[86%] items-center justify-center overflow-hidden rounded-full"
@@ -531,6 +603,7 @@ setColor(currentColor.value);
 			</section>
 
 			<aside
+				v-if="!isFullscreen"
 				data-animate
 				class="fixed left-1/2 bottom-16 z-20 flex w-[min(92vw,560px)] -translate-x-1/2 max-h-[44svh] overflow-y-auto rounded-[1.5rem] border border-white/15 bg-slate-950/55 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition duration-200 sm:bottom-6 sm:w-[min(86vw,560px)] sm:p-4 xl:static xl:mx-0 xl:max-h-[calc(100vh-8.5rem)] xl:w-full xl:max-w-[320px] xl:translate-x-0 xl:self-start xl:bg-slate-950/60"
 				:class="
