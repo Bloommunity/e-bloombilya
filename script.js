@@ -1,15 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
-	// use the member artwork in `images/colors/` as swatches
-	const COLOR_IMAGES = [
-		"images/colors/AIAH.png",
-		"images/colors/BINI OT8.png",
-		"images/colors/COLET.png",
-		"images/colors/GWEN.png",
-		"images/colors/JHOANNA.png",
-		"images/colors/MALOI.png",
-		"images/colors/MIKHA.png",
-		"images/colors/SHEENA.png",
-		"images/colors/STACEY.png",
+	const COLOR_SWATCHES = [
+		{ label: "AIAH", color: "#ff0000" },
+		{ label: "BINI OT8", color: "#ff8b00" },
+		{ label: "COLET", color: "#fff800" },
+		{ label: "GWEN", color: "#00ff01" },
+		{ label: "JHOANNA", color: "#55ffe3" },
+		{ label: "MALOI", color: "#00c7ff" },
+		{ label: "MIKHA", color: "#0000fe" },
+		{ label: "SHEENA", color: "#a700fe" },
+		{ label: "STACEY", color: "#ff0083" },
 	];
 
 	const glow = document.getElementById("glow");
@@ -46,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		glow.style.background = `radial-gradient(circle at 50% 40%, ${c1} 0%, ${c2} 22%, ${c3} 55%, transparent 70%), radial-gradient(circle at 50% 70%, ${hexToRgba(colorHex, 0.18)} 0%, transparent 82%)`;
 		glow.style.boxShadow = `0 0 40px ${hexToRgba(
 			colorHex,
-			0.4
+			0.4,
 		)}, 0 0 140px ${hexToRgba(colorHex, 0.18)}`;
 	}
 
@@ -84,9 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			applyGlow(currentColor);
 		} else if (currentMode === "random") {
 			modeInterval = setInterval(() => {
-				const btns = Array.from(
-					document.querySelectorAll(".color-btn")
-				);
+				const btns = Array.from(document.querySelectorAll(".color-btn"));
 				if (!btns.length) return;
 				const chosen = btns[Math.floor(Math.random() * btns.length)];
 				const c = chosen.dataset.color || "#ffffff";
@@ -109,76 +106,15 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	}
 
-	// build swatches from the images folder; compute an average color from each image
-	function imageToHex(img, size = 32) {
-		return new Promise((resolve) => {
-			const canvas = document.createElement("canvas");
-			canvas.width = size;
-			canvas.height = size;
-			const ctx = canvas.getContext("2d");
-			ctx.clearRect(0, 0, size, size);
-			ctx.drawImage(img, 0, 0, size, size);
-			try {
-				const data = ctx.getImageData(0, 0, size, size).data;
-				let r = 0,
-					g = 0,
-					b = 0,
-					count = 0;
-				for (let i = 0; i < data.length; i += 4) {
-					const alpha = data[i + 3];
-					if (alpha === 0) continue;
-					r += data[i];
-					g += data[i + 1];
-					b += data[i + 2];
-					count++;
-				}
-				if (!count) return resolve("#ffffff");
-				r = Math.round(r / count);
-				g = Math.round(g / count);
-				b = Math.round(b / count);
-				const hex =
-					"#" +
-					((1 << 24) + (r << 16) + (g << 8) + b)
-						.toString(16)
-						.slice(1);
-				resolve(hex);
-			} catch (e) {
-				// fallback to white if cross-origin or other error
-				resolve("#ffffff");
-			}
-		});
-	}
-
 	if (colorsGrid) {
-		for (const src of COLOR_IMAGES) {
-			const img = new Image();
-			img.src = src;
-			img.onload = async () => {
-				const hex = await imageToHex(img, 24);
-				const btn = document.createElement("button");
-				btn.className = "color-btn";
-				btn.dataset.color = hex;
-				btn.setAttribute("aria-label", `Color from ${src}`);
-				// show the image inside the swatch
-				const thumb = document.createElement("img");
-				thumb.src = src;
-				thumb.alt = "";
-				thumb.style.width = "100%";
-				thumb.style.height = "100%";
-				thumb.style.objectFit = "cover";
-				btn.appendChild(thumb);
-				btn.addEventListener("click", () => setColor(hex));
-				colorsGrid.appendChild(btn);
-			};
-			img.onerror = () => {
-				// fallback to a simple color square if image fails
-				const btn = document.createElement("button");
-				btn.className = "color-btn";
-				btn.dataset.color = "#ffffff";
-				btn.style.background = "#ffffff";
-				btn.addEventListener("click", () => setColor("#ffffff"));
-				colorsGrid.appendChild(btn);
-			};
+		for (const swatch of COLOR_SWATCHES) {
+			const btn = document.createElement("button");
+			btn.className = "color-btn";
+			btn.dataset.color = swatch.color;
+			btn.setAttribute("aria-label", `Color from ${swatch.label}`);
+			btn.style.background = swatch.color;
+			btn.addEventListener("click", () => setColor(swatch.color));
+			colorsGrid.appendChild(btn);
 		}
 	}
 
@@ -192,10 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	// fullscreen functionality removed — layout uses fullscreen by default via CSS
 
 	// infinity overlay (power toggle)
-	infinityBtn &&
-		infinityBtn.addEventListener("click", () =>
-			isOn ? turnOff() : turnOn()
-		);
+	infinityBtn && infinityBtn.addEventListener("click", () => (isOn ? turnOff() : turnOn()));
 
 	// modes
 	for (const btn of modeButtons) {
@@ -247,10 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	window.addEventListener("orientationchange", setVhVar);
 	window.addEventListener("pageshow", setVhVar);
 	// visualViewport fires more reliably on Chrome when the address bar toggles
-	if (
-		globalThis.visualViewport &&
-		globalThis.visualViewport.addEventListener
-	) {
+	if (globalThis.visualViewport && globalThis.visualViewport.addEventListener) {
 		globalThis.visualViewport.addEventListener("resize", setVhVar);
 	}
 	// some browsers update innerHeight after touch interactions
@@ -262,8 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // register service worker safely
 (async () => {
 	try {
-		if ("serviceWorker" in navigator)
-			await navigator.serviceWorker.register("/sw.js");
+		if ("serviceWorker" in navigator) await navigator.serviceWorker.register("/sw.js");
 	} catch (e) {
 		// silent fail
 	}

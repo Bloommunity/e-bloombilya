@@ -1,32 +1,40 @@
 <script setup lang="ts">
-import gsap from "gsap";
-
 type Mode = "fixed" | "random" | "blink";
 
 type Swatch = {
-	src: string;
 	label: string;
 	color: string;
-	ready: boolean;
+	ready?: boolean;
 };
 
 type FaceVariant = {
 	src: string;
 };
 
+type FaceVariantMap = Record<string, string>;
+
+type BeforeInstallPromptEvent = Event & {
+	prompt: () => Promise<void> | void;
+	userChoice: Promise<{
+		outcome: "accepted" | "dismissed";
+		platform: string;
+	}>;
+};
+
 const COLOR_IMAGES = [
-	{ src: "/images/colors/AIAH.png", label: "AIAH" },
-	{ src: "/images/colors/BINI OT8.png", label: "BINI OT8" },
-	{ src: "/images/colors/COLET.png", label: "COLET" },
-	{ src: "/images/colors/GWEN.png", label: "GWEN" },
-	{ src: "/images/colors/JHOANNA.png", label: "JHOANNA" },
-	{ src: "/images/colors/MALOI.png", label: "MALOI" },
-	{ src: "/images/colors/MIKHA.png", label: "MIKHA" },
-	{ src: "/images/colors/SHEENA.png", label: "SHEENA" },
-	{ src: "/images/colors/STACEY.png", label: "STACEY" },
+	{ label: "AIAH", color: "#ff0000" },
+	{ label: "BINI OT8", color: "#ff8b00" },
+	{ label: "COLET", color: "#fff800" },
+	{ label: "GWEN", color: "#00ff01" },
+	{ label: "JHOANNA", color: "#55ffe3" },
+	{ label: "MALOI", color: "#00c7ff" },
+	{ label: "MIKHA", color: "#0000fe" },
+	{ label: "SHEENA", color: "#a700fe" },
+	{ label: "STACEY", color: "#ff0083" },
 ];
 
-const OFFICIAL_FACE = "/images/bloombilya.png";
+const OFFICIAL_FACE = "/images/bloombilya-768.png";
+const OFFICIAL_FACE_FULL = "/images/bloombilya.png";
 const FACE_VARIANTS: FaceVariant[] = [
 	{ src: new URL("../assets/images/bloombilya-red.png", import.meta.url).href },
 	{ src: new URL("../assets/images/bloombilya-orange.png", import.meta.url).href },
@@ -38,15 +46,27 @@ const FACE_VARIANTS: FaceVariant[] = [
 	{ src: new URL("../assets/images/bloombilya-violet.png", import.meta.url).href },
 	{ src: new URL("../assets/images/bloombilya-pink.png", import.meta.url).href },
 ];
+const FACE_VARIANTS_BY_COLOR: FaceVariantMap = {
+	"#ff0000": FACE_VARIANTS[0].src,
+	"#ff8b00": FACE_VARIANTS[1].src,
+	"#fff800": FACE_VARIANTS[2].src,
+	"#00ff01": FACE_VARIANTS[3].src,
+	"#55ffe3": FACE_VARIANTS[4].src,
+	"#00c7ff": FACE_VARIANTS[5].src,
+	"#0000fe": FACE_VARIANTS[6].src,
+	"#a700fe": FACE_VARIANTS[7].src,
+	"#ff0083": FACE_VARIANTS[8].src,
+};
 
 const lightstickRef = ref<HTMLElement | null>(null);
 const stageRef = ref<HTMLElement | null>(null);
 const glowRef = ref<HTMLElement | null>(null);
+const deferredInstallPrompt = ref<BeforeInstallPromptEvent | null>(null);
+const canInstallApp = ref(false);
 
 const swatches = ref<Swatch[]>(
 	COLOR_IMAGES.map((item) => ({
 		...item,
-		color: "#ffffff",
 		ready: false,
 	})),
 );
@@ -63,10 +83,30 @@ let modeInterval: ReturnType<typeof globalThis.setInterval> | null = null;
 let removeTouchEndListener: (() => void) | null = null;
 let removeViewportResizeListener: (() => void) | null = null;
 let removeFullscreenListener: (() => void) | null = null;
+let removeInstallPromptListener: (() => void) | null = null;
+let removeAppInstalledListener: (() => void) | null = null;
 let cleanupListeners: (() => void) | null = null;
 
 useHead({
 	title: "E-Bloombilya — Virtual Lightstick",
+});
+
+useSeoMeta({
+	title: "E-Bloombilya — Virtual Lightstick",
+	description:
+		"E-Bloombilya is a BINI-inspired virtual lightstick app with official lightstick styling, color swatches, animated glow modes, and mobile PWA install support.",
+	keywords:
+		"BINI, BINI lightstick, BINI official lightstick, Bloombilya, E-Bloombilya, virtual lightstick, virtual LS, lightstick app, P-pop, BINI fan app",
+	ogTitle: "E-Bloombilya — Virtual Lightstick",
+	ogDescription:
+		"A BINI-inspired virtual lightstick with official lightstick styling, color swatches, and animated glow modes.",
+	ogType: "website",
+	ogImage: "/images/bloombilya.png",
+	twitterCard: "summary_large_image",
+	twitterTitle: "E-Bloombilya — Virtual Lightstick",
+	twitterDescription:
+		"A BINI-inspired virtual lightstick with official lightstick styling, color swatches, and animated glow modes.",
+	twitterImage: "/images/bloombilya.png",
 });
 
 function hexToRgba(hex: string, alpha = 1) {
@@ -91,70 +131,12 @@ function glowStyle(colorHex: string) {
 
 function imageGlowStyle(colorHex: string) {
 	return {
-		filter: `drop-shadow(0 0 18px ${hexToRgba(colorHex, 0.6)}) drop-shadow(0 0 90px ${hexToRgba(colorHex, 0.3)}) brightness(1.12) saturate(1.3)`,
-	};
-}
-
-function hexToRgb(hex: string) {
-	const normalized = hex.replace("#", "");
-	const value = Number.parseInt(normalized, 16);
-
-	return {
-		red: (value >> 16) & 255,
-		green: (value >> 8) & 255,
-		blue: value & 255,
-	};
-}
-
-function hexToHsl(hex: string) {
-	const { red, green, blue } = hexToRgb(hex);
-	const normalizedRed = red / 255;
-	const normalizedGreen = green / 255;
-	const normalizedBlue = blue / 255;
-	const max = Math.max(normalizedRed, normalizedGreen, normalizedBlue);
-	const min = Math.min(normalizedRed, normalizedGreen, normalizedBlue);
-	const delta = max - min;
-
-	let hue = 0;
-	const lightness = (max + min) / 2;
-	const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
-
-	if (delta !== 0) {
-		switch (max) {
-			case normalizedRed:
-				hue = 60 * (((normalizedGreen - normalizedBlue) / delta) % 6);
-				break;
-			case normalizedGreen:
-				hue = 60 * ((normalizedBlue - normalizedRed) / delta + 2);
-				break;
-			default:
-				hue = 60 * ((normalizedRed - normalizedGreen) / delta + 4);
-		}
-	}
-
-	return {
-		hue: (hue + 360) % 360,
-		saturation,
-		lightness,
+		filter: `drop-shadow(0 0 12px ${hexToRgba(colorHex, 0.35)}) brightness(1.06) saturate(1.12)`,
 	};
 }
 
 function resolveFaceSrc(colorHex: string) {
-	const { hue, saturation, lightness } = hexToHsl(colorHex);
-
-	if (saturation < 0.16 || lightness > 0.92) {
-		return OFFICIAL_FACE;
-	}
-
-	if (hue < 15 || hue >= 345) return FACE_VARIANTS[0].src;
-	if (hue < 40) return FACE_VARIANTS[1].src;
-	if (hue < 60) return FACE_VARIANTS[2].src;
-	if (hue < 145) return FACE_VARIANTS[3].src;
-	if (hue < 175) return FACE_VARIANTS[4].src;
-	if (hue < 205) return FACE_VARIANTS[5].src;
-	if (hue < 245) return FACE_VARIANTS[6].src;
-	if (hue < 295) return FACE_VARIANTS[7].src;
-	return FACE_VARIANTS[8].src;
+	return FACE_VARIANTS_BY_COLOR[colorHex.toLowerCase()] ?? OFFICIAL_FACE;
 }
 
 function syncFaceImage(colorHex: string) {
@@ -168,20 +150,6 @@ function applyGlow(colorHex: string) {
 	const styles = glowStyle(colorHex);
 	glowEl.style.background = styles.background;
 	glowEl.style.boxShadow = styles.boxShadow;
-}
-
-function setGlowState(visible: boolean) {
-	const glowEl = glowRef.value;
-	if (!glowEl) return;
-
-	gsap.killTweensOf(glowEl);
-	gsap.to(glowEl, {
-		opacity: visible ? 1 : 0,
-		scale: visible ? 1.03 : 0.94,
-		duration: visible ? 0.18 : 0.14,
-		ease: "power2.out",
-		overwrite: "auto",
-	});
 }
 
 function syncFullscreenState() {
@@ -249,7 +217,6 @@ function turnOn() {
 	glowVisible.value = true;
 	syncFaceImage(currentColor.value);
 	applyGlow(currentColor.value);
-	setGlowState(true);
 	startMode();
 }
 
@@ -260,7 +227,6 @@ function turnOff() {
 	glowVisible.value = false;
 	currentFaceSrc.value = OFFICIAL_FACE;
 	stopMode();
-	setGlowState(false);
 }
 
 function startMode() {
@@ -271,13 +237,11 @@ function startMode() {
 	if (currentMode.value === "fixed") {
 		glowVisible.value = true;
 		applyGlow(currentColor.value);
-		setGlowState(true);
 		return;
 	}
 
 	if (currentMode.value === "random") {
 		glowVisible.value = true;
-		setGlowState(true);
 		modeInterval = globalThis.setInterval(() => {
 			const readyColors = swatches.value.filter(
 				(swatch) => swatch.ready || swatch.color !== "#ffffff",
@@ -292,7 +256,6 @@ function startMode() {
 
 	if (currentMode.value === "blink") {
 		glowVisible.value = true;
-		setGlowState(true);
 		syncFaceImage(currentColor.value);
 
 		modeInterval = globalThis.setInterval(() => {
@@ -303,85 +266,7 @@ function startMode() {
 			} else {
 				currentFaceSrc.value = OFFICIAL_FACE;
 			}
-			setGlowState(glowVisible.value);
 		}, 450);
-	}
-}
-
-async function imageToHex(image: HTMLImageElement, size = 32) {
-	const canvas = document.createElement("canvas");
-	canvas.width = size;
-	canvas.height = size;
-
-	const context = canvas.getContext("2d");
-	if (!context) return "#ffffff";
-
-	context.clearRect(0, 0, size, size);
-	context.drawImage(image, 0, 0, size, size);
-
-	try {
-		const data = context.getImageData(0, 0, size, size).data;
-		let red = 0;
-		let green = 0;
-		let blue = 0;
-		let count = 0;
-
-		for (let index = 0; index < data.length; index += 4) {
-			if (data[index + 3] === 0) continue;
-			red += data[index];
-			green += data[index + 1];
-			blue += data[index + 2];
-			count += 1;
-		}
-
-		if (!count) return "#ffffff";
-
-		red = Math.round(red / count);
-		green = Math.round(green / count);
-		blue = Math.round(blue / count);
-
-		return `#${((1 << 24) + (red << 16) + (green << 8) + blue).toString(16).slice(1)}`;
-	} catch {
-		return "#ffffff";
-	}
-}
-
-async function buildSwatches() {
-	const loaded = await Promise.all(
-		COLOR_IMAGES.map(async (item) => {
-			try {
-				const image = new Image();
-				image.src = item.src;
-				await new Promise<void>((resolve, reject) => {
-					image.onload = () => resolve();
-					image.onerror = () => reject(new Error(`Failed to load ${item.src}`));
-				});
-
-				return {
-					...item,
-					color: await imageToHex(image, 24),
-					ready: true,
-				};
-			} catch {
-				return {
-					...item,
-					color: "#ffffff",
-					ready: true,
-				};
-			}
-		}),
-	);
-
-	swatches.value = loaded;
-
-	await nextTick();
-
-	if (lightstickRef.value) {
-		gsap.fromTo(
-			lightstickRef.value.querySelectorAll("[data-animate]"),
-			{ y: 18, opacity: 0 },
-			{ y: 0, opacity: 1, duration: 0.7, stagger: 0.08, ease: "power3.out" },
-		);
 	}
 }
 
@@ -407,11 +292,28 @@ function registerServiceWorker() {
 	navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
+function onBeforeInstallPrompt(event: Event) {
+	event.preventDefault();
+	deferredInstallPrompt.value = event as BeforeInstallPromptEvent;
+	canInstallApp.value = true;
+}
+
+async function installApp() {
+	if (!deferredInstallPrompt.value) return;
+
+	deferredInstallPrompt.value.prompt();
+	await deferredInstallPrompt.value.userChoice.catch(() => null);
+	deferredInstallPrompt.value = null;
+	canInstallApp.value = false;
+}
+
 onBeforeUnmount(() => {
 	stopMode();
 	removeTouchEndListener?.();
 	removeViewportResizeListener?.();
 	removeFullscreenListener?.();
+	removeInstallPromptListener?.();
+	removeAppInstalledListener?.();
 	cleanupListeners?.();
 });
 
@@ -419,7 +321,19 @@ onMounted(async () => {
 	setViewportHeight();
 	detectIOS();
 	registerServiceWorker();
-	await buildSwatches();
+	globalThis.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+	removeInstallPromptListener = () => {
+		globalThis.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+	};
+
+	const onAppInstalled = () => {
+		deferredInstallPrompt.value = null;
+		canInstallApp.value = false;
+	};
+	globalThis.addEventListener("appinstalled", onAppInstalled);
+	removeAppInstalledListener = () => {
+		globalThis.removeEventListener("appinstalled", onAppInstalled);
+	};
 
 	const onResize = () => setViewportHeight();
 	const onVisibilityChange = () => {
@@ -494,8 +408,7 @@ setColor(currentColor.value);
 		>
 			<header
 				v-if="!isFullscreen"
-				class="flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-white/5 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5 xl:col-span-2"
-				data-animate
+				class="flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-slate-950/55 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.24)] sm:flex-row sm:items-center sm:justify-between sm:p-5 xl:col-span-2"
 			>
 				<div class="space-y-2">
 					<p class="text-[0.62rem] uppercase tracking-[0.5em] text-amber-200/70">
@@ -509,15 +422,23 @@ setColor(currentColor.value);
 				</div>
 
 				<div
-					class="max-w-xl rounded-full border border-white/10 bg-slate-950/35 px-4 py-3 text-sm leading-6 text-slate-300 sm:text-right"
+					class="flex max-w-xl flex-wrap items-center justify-end gap-2 rounded-full border border-white/10 bg-slate-950/35 px-4 py-3 text-sm leading-6 text-slate-300 sm:text-right"
 				>
-					Tap on, pick a color, then switch modes.
+					<span>Tap on, pick a color, then switch modes.</span>
+					<button
+						v-if="canInstallApp"
+						class="rounded-full border border-amber-200/20 bg-amber-300/10 px-3 py-1.5 text-xs font-semibold text-amber-100 transition hover:bg-amber-300/20"
+						type="button"
+						@click="installApp()"
+					>
+						Install app
+					</button>
 				</div>
 			</header>
 
 			<button
 				v-if="!isFullscreen"
-				class="fixed bottom-4 left-1/2 z-30 w-[min(92vw,280px)] -translate-x-1/2 rounded-full border border-white/10 bg-slate-950/72 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition hover:bg-slate-950/85 xl:hidden"
+				class="fixed bottom-4 left-1/2 z-30 w-[min(92vw,280px)] -translate-x-1/2 rounded-full border border-white/10 bg-slate-950/84 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(0,0,0,0.35)] transition hover:bg-slate-950 xl:hidden"
 				type="button"
 				@click="controlsOpen = !controlsOpen"
 			>
@@ -526,17 +447,17 @@ setColor(currentColor.value);
 
 			<section
 				ref="stageRef"
-				class="relative flex min-h-0 items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:p-6 xl:min-w-0"
+				class="relative flex min-h-0 items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/48 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-6 xl:min-w-0"
 				:class="
 					isFullscreen
-						? '!fixed !inset-0 !z-50 !rounded-none !border-0 !bg-black !p-0 !shadow-none !backdrop-blur-0'
+						? '!fixed !inset-0 !z-50 !rounded-none !border-0 !bg-black !p-0 !shadow-none'
 						: ''
 				"
 			>
 				<div
-					class="pointer-events-none absolute left-1/2 top-1/2 z-0 rounded-full transition-opacity duration-300"
+					class="pointer-events-none absolute left-1/2 top-1/2 z-0 rounded-full transition-[opacity,transform] duration-300 ease-out will-change-[opacity,transform]"
 					:class="[
-						glowVisible ? 'opacity-100' : 'opacity-0',
+						glowVisible ? 'scale-100 opacity-100' : 'scale-[0.94] opacity-0',
 						isFullscreen
 							? '!h-[140vmax] !w-[140vmax] -translate-x-1/2 -translate-y-1/2 !blur-[120px]'
 							: 'h-[78vmin] w-[78vmin] -translate-x-1/2 -translate-y-1/2 sm:h-[64vmin] sm:w-[64vmin] xl:h-[52rem] xl:w-[52rem]',
@@ -546,7 +467,7 @@ setColor(currentColor.value);
 				/>
 
 				<button
-					class="absolute right-4 top-4 z-40 rounded-full border border-white/15 bg-slate-950/70 px-4 py-2 text-xs font-semibold text-white shadow-[0_14px_36px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition hover:bg-slate-950/85"
+					class="absolute right-4 top-4 z-40 rounded-full border border-white/15 bg-slate-950/84 px-4 py-2 text-xs font-semibold text-white shadow-[0_14px_36px_rgba(0,0,0,0.35)] transition hover:bg-slate-950"
 					type="button"
 					@click="toggleFullscreen()"
 				>
@@ -581,6 +502,11 @@ setColor(currentColor.value);
 								"
 								:src="currentFaceSrc"
 								:key="currentFaceSrc"
+								width="512"
+								height="512"
+								loading="eager"
+								fetchpriority="high"
+								decoding="async"
 								alt="BINI bloombilya lightstick"
 							/>
 						</div>
@@ -604,8 +530,7 @@ setColor(currentColor.value);
 
 			<aside
 				v-if="!isFullscreen"
-				data-animate
-				class="fixed left-1/2 bottom-16 z-20 flex w-[min(92vw,560px)] -translate-x-1/2 max-h-[44svh] overflow-y-auto rounded-[1.5rem] border border-white/15 bg-slate-950/55 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition duration-200 sm:bottom-6 sm:w-[min(86vw,560px)] sm:p-4 xl:static xl:mx-0 xl:max-h-[calc(100vh-8.5rem)] xl:w-full xl:max-w-[320px] xl:translate-x-0 xl:self-start xl:bg-slate-950/60"
+				class="fixed left-1/2 bottom-16 z-20 flex w-[min(92vw,560px)] -translate-x-1/2 max-h-[44svh] overflow-y-auto rounded-[1.5rem] border border-white/15 bg-slate-950/78 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.28)] transition duration-200 sm:bottom-6 sm:w-[min(86vw,560px)] sm:p-4 xl:static xl:mx-0 xl:max-h-[calc(100vh-8.5rem)] xl:w-full xl:max-w-[320px] xl:translate-x-0 xl:self-start xl:bg-slate-950/84"
 				:class="
 					controlsOpen
 						? 'opacity-100 translate-y-0 pointer-events-auto'
@@ -656,7 +581,7 @@ setColor(currentColor.value);
 								class="rounded-full border px-3 py-2 text-xs font-medium transition duration-200 hover:-translate-y-0.5 sm:px-4 sm:text-sm"
 								:class="
 									currentMode === mode
-										? 'border-fuchsia-400/30 bg-fuchsia-500 text-white'
+										? 'border-fuchsia-200/40 bg-fuchsia-300 text-slate-950'
 										: 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
 								"
 								@click="currentMode = mode as Mode"
@@ -671,7 +596,7 @@ setColor(currentColor.value);
 					>
 						<button
 							v-for="swatch in swatches"
-							:key="swatch.src"
+							:key="swatch.color"
 							type="button"
 							class="group aspect-square min-h-[3rem] overflow-hidden rounded-xl border transition duration-200 hover:-translate-y-0.5"
 							:class="
@@ -679,15 +604,11 @@ setColor(currentColor.value);
 									? 'border-white/60 shadow-[0_12px_28px_rgba(0,0,0,0.45),0_0_0_3px_rgba(255,255,255,0.08)]'
 									: 'border-white/5 shadow-[0_8px_20px_rgba(0,0,0,0.24)]'
 							"
-							:style="{ background: swatch.color }"
+							:style="{ backgroundColor: swatch.color }"
 							:aria-label="`Color from ${swatch.label}`"
 							@click="setColor(swatch.color)"
 						>
-							<img
-								:src="swatch.src"
-								alt=""
-								class="h-full w-full object-cover opacity-85"
-							/>
+							<span class="sr-only">{{ swatch.label }}</span>
 						</button>
 					</div>
 
@@ -697,6 +618,17 @@ setColor(currentColor.value);
 					</p>
 				</div>
 			</aside>
+
+			<footer
+				v-if="!isFullscreen"
+				class="pointer-events-none fixed inset-x-0 bottom-0 z-10 px-4 pb-2 sm:px-6 sm:pb-4"
+			>
+				<div class="mx-auto max-w-7xl">
+					<p class="pointer-events-auto text-center text-[0.7rem] uppercase tracking-[0.35em] text-slate-300/70">
+						Made by Blooms for Blooms
+					</p>
+				</div>
+			</footer>
 		</div>
 	</main>
 </template>

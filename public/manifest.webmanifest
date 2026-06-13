@@ -1,22 +1,26 @@
 {
 	"name": "E-Bloombilya — Virtual Lightstick",
 	"short_name": "Bloombilya",
+	"id": "/",
 	"start_url": "/",
 	"scope": "/",
 	"display": "standalone",
+	"display_override": ["standalone", "window-controls-overlay"],
 	"background_color": "#050816",
 	"theme_color": "#050816",
-	"description": "Virtual lightstick app for concerts with color swatches, modes, and animation.",
+	"description": "A mobile-friendly virtual lightstick for BINI fans with official lightstick styling, color swatches, and animated modes.",
 	"icons": [
 		{
-			"src": "/images/favicon.ico",
+			"src": "/images/bloombilya.png",
 			"sizes": "512x512",
-			"type": "image/x-icon"
+			"type": "image/png",
+			"purpose": "any maskable"
 		},
 		{
-			"src": "/images/favicon.ico",
+			"src": "/images/bloombilya.png",
 			"sizes": "192x192",
-			"type": "image/x-icon"
+			"type": "image/png",
+			"purpose": "any"
 		}
 	]
 }

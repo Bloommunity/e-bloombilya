@@ -1,7 +1,76 @@
-const CACHE_NAME = "ebloombilya-nuxt-v1";
+const CACHE_NAME = "ebloombilya-nuxt-v3";
+const PRECACHE_URLS = [
+	"/",
+	"/manifest.webmanifest",
+	"/images/bloombilya-512.png",
+	"/images/bloombilya-768.png",
+	"/images/bloombilya.png",
+	"/images/favicon.ico",
+];
+
+function toSameOriginUrl(candidate) {
+	if (
+		!candidate ||
+		candidate.startsWith("data:") ||
+		candidate.startsWith("mailto:") ||
+		candidate.startsWith("tel:")
+	) {
+		return null;
+	}
+
+	try {
+		const url = new URL(candidate, globalThis.location.origin);
+		return url.origin === globalThis.location.origin ? url.toString() : null;
+	} catch {
+		return null;
+	}
+}
+
+function extractAssetUrls(html) {
+	const matches = html.matchAll(/(?:src|href)=(['"])([^'"]+)\1/gi);
+	const urls = new Set();
+
+	for (const match of matches) {
+		const resolved = toSameOriginUrl(match[2]);
+		if (resolved) urls.add(resolved);
+	}
+
+	return [...urls];
+}
+
+async function cacheResponse(cache, requestUrl) {
+	const response = await fetch(requestUrl);
+	if (!response.ok) return;
+
+	try {
+		await cache.put(requestUrl, response.clone());
+	} catch {
+		// ignore opaque or non-cacheable responses
+	}
+
+	return response;
+}
+
+async function precacheAppShell() {
+	const cache = await caches.open(CACHE_NAME);
+	const shellResponse = await cacheResponse(cache, "/");
+
+	await Promise.all(PRECACHE_URLS.slice(1).map((requestUrl) => cacheResponse(cache, requestUrl)));
+
+	if (!shellResponse) return;
+
+	const html = await shellResponse.clone().text();
+	const assetUrls = extractAssetUrls(html);
+	await Promise.all(assetUrls.map((requestUrl) => cacheResponse(cache, requestUrl)));
+}
 
 self.addEventListener("install", (event) => {
-	event.waitUntil(self.skipWaiting());
+	event.waitUntil(
+		(async () => {
+			await precacheAppShell();
+			await globalThis.skipWaiting();
+		})(),
+	);
 });
 
 self.addEventListener("activate", (event) => {
@@ -16,7 +85,7 @@ self.addEventListener("activate", (event) => {
 				),
 			),
 	);
-	self.clients.claim();
+	globalThis.clients.claim();
 });
 
 async function cacheFirst(request) {
@@ -57,6 +126,11 @@ self.addEventListener("fetch", (event) => {
 
 	if (request.mode === "navigate") {
 		event.respondWith(networkFirst(request));
+		return;
+	}
+
+	if (request.destination === "manifest") {
+		event.respondWith(cacheFirst(request));
 		return;
 	}
 

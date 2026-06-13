@@ -1,27 +1,18 @@
 // bump this to force clients to refresh cached assets when we deploy
-const CACHE_NAME = "ebloombilya-v2";
+const CACHE_NAME = "ebloombilya-v3";
 const ASSETS = [
 	"/",
 	"/index.html",
 	"/styles.css",
 	"/script.js",
 	"/manifest.json",
+	"/images/bloombilya-512.png",
+	"/images/bloombilya-768.png",
 	"/images/bloombilya.png",
-	"/images/AIAH.png",
-	"/images/COLET.png",
-	"/images/GWEN.png",
-	"/images/JHOANNA.png",
-	"/images/MALOI.png",
-	"/images/MIKHA.png",
-	"/images/SHEENA.png",
-	"/images/STACEY.png",
-	"/images/BINI%20OT8.png",
 ];
 
 self.addEventListener("install", (event) => {
-	event.waitUntil(
-		caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-	);
+	event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
 	self.skipWaiting();
 });
 
@@ -31,9 +22,9 @@ self.addEventListener("activate", (event) => {
 			Promise.all(
 				keys.map((k) => {
 					if (k !== CACHE_NAME) return caches.delete(k);
-				})
-			)
-		)
+				}),
+			),
+		),
 	);
 	self.clients.claim();
 });
@@ -65,8 +56,12 @@ self.addEventListener("fetch", (event) => {
 				.catch(() => {
 					// final fallback: try to return a cached image for image requests
 					if (req.destination === "image")
-						return caches.match("/images/bloombilya.png");
+						return (
+							caches.match("/images/bloombilya-768.png") ||
+							caches.match("/images/bloombilya-512.png") ||
+							caches.match("/images/bloombilya.png")
+						);
 				});
-		})
+		}),
 	);
 });
