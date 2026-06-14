@@ -1,4 +1,4 @@
-type Mode = "fixed" | "random" | "blink";
+type Mode = "fixed" | "random" | "blink" | "control";
 
 type Swatch = {
 	label: string;
