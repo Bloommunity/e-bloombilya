@@ -541,7 +541,12 @@ setColor(currentColor.value);
 							? '!h-[140vmax] !w-[140vmax] -translate-x-1/2 -translate-y-1/2 !blur-[120px]'
 							: 'h-[78vmin] w-[78vmin] -translate-x-1/2 -translate-y-1/2 sm:h-[64vmin] sm:w-[64vmin] xl:h-[52rem] xl:w-[52rem]',
 					]"
-					:style="glowStyle(currentColor, isFullscreen ? forceMobileFullscreenBrightness() : 1)"
+					:style="
+						glowStyle(
+							currentColor,
+							isFullscreen ? forceMobileFullscreenBrightness() : 1,
+						)
+					"
 					aria-hidden="true"
 				/>
 
@@ -579,7 +584,11 @@ setColor(currentColor.value);
 										? 'mix-blend-screen'
 										: 'grayscale-[65%] brightness-75 opacity-70 mix-blend-normal'
 								"
-								:style="isFullscreen ? faceBrightnessStyle(forceMobileFullscreenBrightness()) : undefined"
+								:style="
+									isFullscreen
+										? faceBrightnessStyle(forceMobileFullscreenBrightness())
+										: undefined
+								"
 								:src="currentFaceSrc"
 								:key="currentFaceSrc"
 								width="512"
@@ -703,7 +712,9 @@ setColor(currentColor.value);
 				v-if="isFullscreen"
 				class="fixed inset-x-0 bottom-4 z-50 mx-auto w-[min(92vw,26rem)] rounded-[1.25rem] border border-white/10 bg-slate-950/88 px-4 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.4)] backdrop-blur-md md:hidden"
 			>
-				<div class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">
+				<div
+					class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.28em] text-slate-300"
+				>
 					<span>Brightness</span>
 					<span>{{ Math.round(forceMobileFullscreenBrightness() * 100) }}%</span>
 				</div>
@@ -729,16 +740,21 @@ setColor(currentColor.value);
 				class="fixed inset-0 z-[60] flex items-center justify-center bg-black/68 px-4 py-6 backdrop-blur-sm"
 				aria-labelledby="fullscreen-warning-title"
 			>
-				<div class="w-full max-w-md rounded-[1.5rem] border border-white/10 bg-slate-950/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.5)] sm:p-6">
+				<div
+					class="w-full max-w-md rounded-[1.5rem] border border-white/10 bg-slate-950/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.5)] sm:p-6"
+				>
 					<p class="text-[0.62rem] uppercase tracking-[0.5em] text-amber-200/70">
 						Fullscreen warning
 					</p>
-					<h2 id="fullscreen-warning-title" class="mt-3 text-2xl font-semibold text-white">
+					<h2
+						id="fullscreen-warning-title"
+						class="mt-3 text-2xl font-semibold text-white"
+					>
 						Before you go fullscreen on mobile
 					</h2>
 					<p class="mt-3 text-sm leading-6 text-slate-300">
-						When you switch to fullscreen on mobile, the app will force a brighter display
-						setting so the lightning effect stays visible and performs better.
+						When you switch to fullscreen on mobile, the app will force a brighter
+						display setting so the lightning effect stays visible and performs better.
 					</p>
 					<p class="mt-3 text-xs leading-5 text-slate-400">
 						Close this alert to continue. You can snooze it for a day if you want.
@@ -768,9 +784,17 @@ setColor(currentColor.value);
 			>
 				<div class="mx-auto max-w-7xl">
 					<p
-						class="pointer-events-auto text-center text-[0.7rem] uppercase tracking-[0.35em] text-slate-300/70"
+						class="pointer-events-auto mx-auto max-w-2xl text-center text-[0.72rem] leading-relaxed text-slate-300/80 sm:text-sm"
 					>
-						Made by Blooms for Blooms
+						Made by Blooms, for Blooms. To contribute, please visit our open-source
+						<a
+							href="https://github.com/Bloommunity/e-bloombilya"
+							target="_blank"
+							rel="noreferrer"
+							class="font-semibold text-white underline decoration-white/30 underline-offset-4 transition hover:decoration-white/70"
+						>
+							repository.
+						</a>
 					</p>
 				</div>
 			</footer>
