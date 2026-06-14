@@ -35,6 +35,10 @@ const COLOR_IMAGES = [
 
 const OFFICIAL_FACE = "/images/bloombilya-768.png";
 const OFFICIAL_FACE_FULL = "/images/bloombilya.png";
+const MOBILE_FULLSCREEN_WARNING_KEY = "ebloombilya-fullscreen-warning-snooze-until";
+const MOBILE_FULLSCREEN_WARNING_SNOOZE_MS = 24 * 60 * 60 * 1000;
+const FORCED_FULLSCREEN_BRIGHTNESS = 1.24;
+const MOBILE_FULLSCREEN_QUERY = "(max-width: 768px), (pointer: coarse)";
 const FACE_VARIANTS: FaceVariant[] = [
 	{ src: new URL("../assets/images/bloombilya-red.png", import.meta.url).href },
 	{ src: new URL("../assets/images/bloombilya-orange.png", import.meta.url).href },
@@ -76,6 +80,9 @@ const currentMode = ref<Mode>("fixed");
 const isOn = ref(false);
 const glowVisible = ref(false);
 const isFullscreen = ref(false);
+const fullscreenBrightness = ref(1);
+const isMobileFullscreen = ref(false);
+const showFullscreenWarning = ref(false);
 const controlsOpen = ref(true);
 const currentFaceSrc = ref(OFFICIAL_FACE);
 
@@ -118,15 +125,67 @@ function hexToRgba(hex: string, alpha = 1) {
 	return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
-function glowStyle(colorHex: string) {
-	const centerTone = hexToRgba(colorHex, 0.18);
-	const midTone = hexToRgba(colorHex, 0.82);
-	const edgeTone = hexToRgba(colorHex, 0.28);
+function clamp(value: number, min: number, max: number) {
+	return Math.min(max, Math.max(min, value));
+}
+
+function glowStyle(colorHex: string, brightnessScale = 1) {
+	const glowScale = clamp(brightnessScale, 0.7, 1.6);
+	const centerTone = hexToRgba(colorHex, clamp(0.18 * glowScale, 0.12, 0.34));
+	const midTone = hexToRgba(colorHex, clamp(0.82 * glowScale, 0.45, 1));
+	const edgeTone = hexToRgba(colorHex, clamp(0.28 * glowScale, 0.16, 0.42));
 
 	return {
 		background: `radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.18) 0%, ${midTone} 22%, ${edgeTone} 55%, transparent 70%), radial-gradient(circle at 50% 70%, ${centerTone} 0%, transparent 82%)`,
-		boxShadow: `0 0 40px ${hexToRgba(colorHex, 0.4)}, 0 0 140px ${hexToRgba(colorHex, 0.18)}`,
+		boxShadow: `0 0 40px ${hexToRgba(colorHex, clamp(0.4 * glowScale, 0.28, 0.68))}, 0 0 140px ${hexToRgba(colorHex, clamp(0.18 * glowScale, 0.12, 0.34))}`,
 	};
+}
+
+function faceBrightnessStyle(brightnessScale: number) {
+	return {
+		"--tw-brightness": `brightness(${brightnessScale})`,
+	} as Record<string, string>;
+}
+
+function getFullscreenWarningSnoozeUntil() {
+	const storedValue = globalThis.localStorage?.getItem(MOBILE_FULLSCREEN_WARNING_KEY);
+	if (!storedValue) return 0;
+
+	const parsedValue = Number.parseInt(storedValue, 10);
+	if (!Number.isFinite(parsedValue)) {
+		globalThis.localStorage?.removeItem(MOBILE_FULLSCREEN_WARNING_KEY);
+		return 0;
+	}
+
+	return parsedValue;
+}
+
+function isFullscreenWarningSnoozed() {
+	return Date.now() < getFullscreenWarningSnoozeUntil();
+}
+
+function forceMobileFullscreenBrightness() {
+	return isMobileFullscreen.value ? FORCED_FULLSCREEN_BRIGHTNESS : fullscreenBrightness.value;
+}
+
+function syncFullscreenWarningState() {
+	if (!isMobileFullscreen.value || isFullscreenWarningSnoozed()) {
+		showFullscreenWarning.value = false;
+		return;
+	}
+
+	showFullscreenWarning.value = true;
+}
+
+function dismissFullscreenWarning(remindLater = false) {
+	if (remindLater) {
+		globalThis.localStorage?.setItem(
+			MOBILE_FULLSCREEN_WARNING_KEY,
+			String(Date.now() + MOBILE_FULLSCREEN_WARNING_SNOOZE_MS),
+		);
+	}
+
+	showFullscreenWarning.value = false;
 }
 
 function imageGlowStyle(colorHex: string) {
@@ -286,6 +345,10 @@ function detectIOS() {
 	}
 }
 
+function syncMobileFullscreenState() {
+	isMobileFullscreen.value = globalThis.matchMedia(MOBILE_FULLSCREEN_QUERY).matches;
+}
+
 function registerServiceWorker() {
 	if (!("serviceWorker" in navigator)) return;
 
@@ -320,6 +383,8 @@ onBeforeUnmount(() => {
 onMounted(async () => {
 	setViewportHeight();
 	detectIOS();
+	syncMobileFullscreenState();
+	syncFullscreenWarningState();
 	registerServiceWorker();
 	globalThis.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
 	removeInstallPromptListener = () => {
@@ -336,6 +401,10 @@ onMounted(async () => {
 	};
 
 	const onResize = () => setViewportHeight();
+	const onDeviceChange = () => {
+		syncMobileFullscreenState();
+		syncFullscreenWarningState();
+	};
 	const onVisibilityChange = () => {
 		if (document.hidden) {
 			stopMode();
@@ -350,6 +419,8 @@ onMounted(async () => {
 	globalThis.addEventListener("resize", onResize);
 	globalThis.addEventListener("orientationchange", onResize);
 	globalThis.addEventListener("pageshow", onResize);
+	globalThis.addEventListener("resize", onDeviceChange);
+	globalThis.addEventListener("orientationchange", onDeviceChange);
 	document.addEventListener("visibilitychange", onVisibilityChange);
 
 	if (globalThis.visualViewport) {
@@ -375,8 +446,16 @@ onMounted(async () => {
 		globalThis.removeEventListener("resize", onResize);
 		globalThis.removeEventListener("orientationchange", onResize);
 		globalThis.removeEventListener("pageshow", onResize);
+		globalThis.removeEventListener("resize", onDeviceChange);
+		globalThis.removeEventListener("orientationchange", onDeviceChange);
 		document.removeEventListener("visibilitychange", onVisibilityChange);
 	};
+});
+
+watch(isFullscreen, (value) => {
+	if (!value && !isMobileFullscreen.value) {
+		showFullscreenWarning.value = false;
+	}
 });
 
 watch(currentMode, () => {
@@ -462,7 +541,7 @@ setColor(currentColor.value);
 							? '!h-[140vmax] !w-[140vmax] -translate-x-1/2 -translate-y-1/2 !blur-[120px]'
 							: 'h-[78vmin] w-[78vmin] -translate-x-1/2 -translate-y-1/2 sm:h-[64vmin] sm:w-[64vmin] xl:h-[52rem] xl:w-[52rem]',
 					]"
-					:style="glowStyle(currentColor)"
+					:style="glowStyle(currentColor, isFullscreen ? forceMobileFullscreenBrightness() : 1)"
 					aria-hidden="true"
 				/>
 
@@ -500,6 +579,7 @@ setColor(currentColor.value);
 										? 'mix-blend-screen'
 										: 'grayscale-[65%] brightness-75 opacity-70 mix-blend-normal'
 								"
+								:style="isFullscreen ? faceBrightnessStyle(forceMobileFullscreenBrightness()) : undefined"
 								:src="currentFaceSrc"
 								:key="currentFaceSrc"
 								width="512"
@@ -619,12 +699,77 @@ setColor(currentColor.value);
 				</div>
 			</aside>
 
+			<div
+				v-if="isFullscreen"
+				class="fixed inset-x-0 bottom-4 z-50 mx-auto w-[min(92vw,26rem)] rounded-[1.25rem] border border-white/10 bg-slate-950/88 px-4 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.4)] backdrop-blur-md md:hidden"
+			>
+				<div class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">
+					<span>Brightness</span>
+					<span>{{ Math.round(forceMobileFullscreenBrightness() * 100) }}%</span>
+				</div>
+				<input
+					v-model.number="fullscreenBrightness"
+					:disabled="isMobileFullscreen"
+					class="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-white/12 accent-amber-300"
+					type="range"
+					min="0.7"
+					max="1.6"
+					step="0.01"
+					aria-label="Fullscreen brightness"
+				/>
+				<p v-if="isMobileFullscreen" class="mt-2 text-[0.72rem] leading-5 text-slate-300">
+					Mobile fullscreen uses a forced brightness boost so the lighting effect stays
+					clear.
+				</p>
+			</div>
+
+			<dialog
+				v-if="showFullscreenWarning"
+				open
+				class="fixed inset-0 z-[60] flex items-center justify-center bg-black/68 px-4 py-6 backdrop-blur-sm"
+				aria-labelledby="fullscreen-warning-title"
+			>
+				<div class="w-full max-w-md rounded-[1.5rem] border border-white/10 bg-slate-950/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.5)] sm:p-6">
+					<p class="text-[0.62rem] uppercase tracking-[0.5em] text-amber-200/70">
+						Fullscreen warning
+					</p>
+					<h2 id="fullscreen-warning-title" class="mt-3 text-2xl font-semibold text-white">
+						Before you go fullscreen on mobile
+					</h2>
+					<p class="mt-3 text-sm leading-6 text-slate-300">
+						When you switch to fullscreen on mobile, the app will force a brighter display
+						setting so the lightning effect stays visible and performs better.
+					</p>
+					<p class="mt-3 text-xs leading-5 text-slate-400">
+						Close this alert to continue. You can snooze it for a day if you want.
+					</p>
+					<div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+						<button
+							type="button"
+							class="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/14"
+							@click="dismissFullscreenWarning(false)"
+						>
+							Close
+						</button>
+						<button
+							type="button"
+							class="rounded-full border border-amber-200/20 bg-amber-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-200"
+							@click="dismissFullscreenWarning(true)"
+						>
+							Remind me later
+						</button>
+					</div>
+				</div>
+			</dialog>
+
 			<footer
 				v-if="!isFullscreen"
 				class="pointer-events-none fixed inset-x-0 bottom-0 z-10 px-4 pb-2 sm:px-6 sm:pb-4"
 			>
 				<div class="mx-auto max-w-7xl">
-					<p class="pointer-events-auto text-center text-[0.7rem] uppercase tracking-[0.35em] text-slate-300/70">
+					<p
+						class="pointer-events-auto text-center text-[0.7rem] uppercase tracking-[0.35em] text-slate-300/70"
+					>
 						Made by Blooms for Blooms
 					</p>
 				</div>
