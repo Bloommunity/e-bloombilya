@@ -1,4 +1,9 @@
 <script setup lang="ts">
+const requestUrl = useRequestURL();
+const siteUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+const canonicalUrl = new URL(requestUrl.pathname, siteUrl).href;
+const socialImageUrl = new URL("/images/bloombilya.png", siteUrl).href;
+
 const {
 	canInstallApp,
 	swatches,
@@ -30,6 +35,12 @@ const {
 
 useHead({
 	title: "E-Bloombilya — Virtual Lightstick",
+	link: [
+		{
+			rel: "canonical",
+			href: canonicalUrl,
+		},
+	],
 });
 
 useSeoMeta({
@@ -41,13 +52,19 @@ useSeoMeta({
 	ogTitle: "E-Bloombilya — Virtual Lightstick",
 	ogDescription:
 		"A BINI-inspired virtual lightstick with official lightstick styling, color swatches, and animated glow modes.",
+	ogUrl: canonicalUrl,
+	ogSiteName: "E-Bloombilya",
 	ogType: "website",
-	ogImage: "/images/bloombilya.png",
+	ogImage: socialImageUrl,
+	ogImageWidth: 1563,
+	ogImageHeight: 1563,
+	ogImageType: "image/png",
 	twitterCard: "summary_large_image",
 	twitterTitle: "E-Bloombilya — Virtual Lightstick",
 	twitterDescription:
 		"A BINI-inspired virtual lightstick with official lightstick styling, color swatches, and animated glow modes.",
-	twitterImage: "/images/bloombilya.png",
+	twitterImage: socialImageUrl,
+	twitterImageAlt: "E-Bloombilya virtual lightstick",
 });
 </script>
 
