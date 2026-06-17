@@ -5,10 +5,10 @@ export default defineNuxtConfig({
 		appManifest: false,
 	},
 	app: {
-		htmlAttrs: {
-			lang: "en",
-		},
 		head: {
+			htmlAttrs: {
+				lang: "en",
+			},
 			title: "E-Bloombilya — Virtual Lightstick",
 			meta: [
 				{

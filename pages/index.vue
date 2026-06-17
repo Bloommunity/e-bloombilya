@@ -4,6 +4,7 @@ const siteUrl = `${requestUrl.protocol}//${requestUrl.host}`;
 const canonicalUrl = new URL(requestUrl.pathname, siteUrl).href;
 const socialImageUrl = new URL("/images/bloombilya.png", siteUrl).href;
 
+const lightstickApp = useLightstickApp();
 const {
 	canInstallApp,
 	swatches,
@@ -31,7 +32,9 @@ const {
 	toggleFullscreen,
 	installApp,
 	toggleControls,
-} = useLightstickApp();
+} = lightstickApp;
+
+const { enterMusicMode, enterDeviceAudioMode, exitMusicMode } = useMusicSync(lightstickApp);
 
 useHead({
 	title: "E-Bloombilya — Virtual Lightstick",
@@ -114,6 +117,8 @@ useSeoMeta({
 				@turn-off="turnOff"
 				@set-mode="setMode"
 				@set-color="setColor"
+				@enter-device-audio-mode="enterDeviceAudioMode"
+				@exit-music-mode="exitMusicMode"
 			/>
 
 			<FullscreenBrightnessBar
