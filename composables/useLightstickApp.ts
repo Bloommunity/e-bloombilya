@@ -1,4 +1,4 @@
-type Mode = "fixed" | "random" | "blink" | "control";
+type Mode = "fixed" | "random" | "blink" | "control" | "music";
 
 type Swatch = {
 	label: string;
@@ -315,6 +315,13 @@ export function useLightstickApp() {
 					currentFaceSrc.value = OFFICIAL_FACE;
 				}
 			}, 450);
+		}
+
+		if (currentMode.value === "music") {
+			glowVisible.value = true;
+			syncFaceImage(currentColor.value);
+			applyGlow(currentColor.value);
+			// Music sync is handled by useMusicSync composable
 		}
 	}
 

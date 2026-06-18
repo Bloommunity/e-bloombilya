@@ -1,5 +1,5 @@
 <script setup lang="ts">
-type Mode = "fixed" | "random" | "blink" | "control";
+type Mode = "fixed" | "random" | "blink" | "control" | "music";
 
 type Swatch = {
 	label: string;
@@ -7,13 +7,14 @@ type Swatch = {
 	ready?: boolean;
 };
 
-const modes: Mode[] = ["fixed", "random", "blink", "control"];
+const modes: Mode[] = ["fixed", "random", "blink", "control", "music"];
 
 const modeLabels: Record<Mode, string> = {
 	fixed: "Fixed",
 	random: "Random",
 	blink: "Blink",
 	control: "Control",
+	music: "Music",
 };
 
 defineProps<{
@@ -25,13 +26,41 @@ defineProps<{
 	swatches: Swatch[];
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
 	"toggle-controls": [];
 	"turn-on": [];
 	"turn-off": [];
 	"set-mode": [mode: Mode];
 	"set-color": [color: string];
+	"enter-device-audio-mode": [];
+	"exit-music-mode": [];
 }>();
+
+const isListening = ref(false);
+const statusMessage = ref("");
+const audioError = ref("");
+
+async function startListeningToDevice() {
+	try {
+		statusMessage.value = "Requesting microphone access...";
+		audioError.value = "";
+		emit("enter-device-audio-mode");
+		isListening.value = true;
+		statusMessage.value = "Listening to device audio...";
+	} catch (error) {
+		console.error("Failed to access microphone:", error);
+		audioError.value = "Microphone access denied. Please check permissions.";
+		statusMessage.value = "";
+		isListening.value = false;
+	}
+}
+
+function stopListening() {
+	isListening.value = false;
+	statusMessage.value = "";
+	audioError.value = "";
+	emit("exit-music-mode");
+}
 </script>
 
 <template>
@@ -83,6 +112,51 @@ defineEmits<{
 				>
 					Off
 				</button>
+			</section>
+
+			<section
+				v-if="currentMode === 'music'"
+				class="rounded-2xl border border-white/10 bg-slate-900/55 p-3 space-y-3"
+			>
+				<div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400 mb-2">
+					Device Audio
+				</div>
+
+				<p class="text-xs text-slate-300">
+					Listen to and sync with sound playing on your device (microphone input).
+				</p>
+
+				<div class="flex gap-2">
+					<button
+						v-if="!isListening"
+						@click="startListeningToDevice"
+						class="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
+					>
+						🎤 Start Listening
+					</button>
+					<button
+						v-else
+						@click="stopListening"
+						class="flex-1 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 transition"
+					>
+						⏹ Stop Listening
+					</button>
+				</div>
+
+				<div v-if="audioError" class="text-xs text-red-400 bg-red-950/30 rounded p-2">
+					{{ audioError }}
+				</div>
+				<div
+					v-if="statusMessage"
+					class="text-xs text-emerald-400 bg-emerald-950/30 rounded p-2"
+				>
+					{{ statusMessage }}
+				</div>
+
+				<p class="text-xs text-slate-400">
+					The lightstick will react to any sound on your device. Works best with music or
+					videos playing!
+				</p>
 			</section>
 
 			<section class="rounded-2xl border border-white/10 bg-slate-900/55 p-3">
