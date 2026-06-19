@@ -25,6 +25,26 @@ export default defineNuxtConfig({
 					content:
 						"E-Bloombilya is a BINI-inspired virtual lightstick app with official lightstick styling, color swatches, and animated glow modes.",
 				},
+				{ property: "og:title", content: "E-Bloombilya — Virtual Lightstick" },
+				{
+					property: "og:description",
+					content:
+						"A BINI-inspired virtual lightstick app with official lightstick styling, color swatches, and animated glow modes.",
+				},
+				{ property: "og:image", content: "/images/bloombilya.png" },
+				{ property: "og:image:type", content: "image/png" },
+				{ property: "og:image:width", content: "1563" },
+				{ property: "og:image:height", content: "1563" },
+				{ property: "og:image:alt", content: "E-Bloombilya virtual lightstick" },
+				{ name: "twitter:card", content: "summary_large_image" },
+				{ name: "twitter:title", content: "E-Bloombilya — Virtual Lightstick" },
+				{
+					name: "twitter:description",
+					content:
+						"A BINI-inspired virtual lightstick app with official lightstick styling, color swatches, and animated glow modes.",
+				},
+				{ name: "twitter:image", content: "/images/bloombilya.png" },
+				{ name: "twitter:image:alt", content: "E-Bloombilya virtual lightstick" },
 			],
 			link: [
 				{
