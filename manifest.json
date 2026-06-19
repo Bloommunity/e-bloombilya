@@ -8,14 +8,15 @@
 	"description": "Virtual lightstick app for concerts — on/off, colors and modes.",
 	"icons": [
 		{
-			"src": "images/favicon.ico",
+			"src": "/images/bloombilya.png",
 			"sizes": "512x512",
-			"type": "image/x-icon"
+			"type": "image/png",
+			"purpose": "any maskable"
 		},
 		{
-			"src": "images/favicon.ico",
+			"src": "/images/bloombilya.png",
 			"sizes": "192x192",
-			"type": "image/x-icon"
+			"type": "image/png"
 		}
 	]
 }
